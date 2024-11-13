@@ -5,7 +5,7 @@ import gymnasium as gym
 from typing import Callable
 
 import numpy as np
-from utils.animation_util import LiveAnimationPlot
+from src.utils.animation_util import LiveAnimationPlot
 from gymnasium.envs.mujoco import MujocoEnv
 from moviepy.editor import vfx
 
@@ -13,7 +13,7 @@ from gymnasium.wrappers.monitoring import video_recorder
 from moviepy.editor import VideoFileClip, clips_array
 from gymnasium import spaces
 from metaworld.envs import ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE as METAWORLD_ENVS
-from metaworld.envs.reward_utils import tolerance
+from metaworld.envs.mujoco.utils.reward_utils import tolerance
 
 
 def recursive_set_render_mode(env, mode):

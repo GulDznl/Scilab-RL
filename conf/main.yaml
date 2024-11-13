@@ -21,7 +21,7 @@ env_kwargs: {}
 # learning algorithm.
 # TODO: maybe there is a better place to put render_metrics_* because they depend on the
 # algorithm. Maybe put them in the algorithm/xyz.yaml
-render: 'none' # 'display', 'record', or anything else for neither one
+render: 'display' # 'display', 'record', or anything else for neither one
 render_freq: 5 # epochs
 render_metrics_train: ['train/rollout_rewards_step']
 render_metrics_test: ['eval/rollout_rewards_step']
