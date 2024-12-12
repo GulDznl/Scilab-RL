@@ -1,13 +1,14 @@
-from typing import Any, Dict, List, TextIO, Tuple, Union
-import warnings
 import os
 import sys
-from stable_baselines3.common.logger import KVWriter, Video, FormatUnsupportedError, SeqWriter, configure
+import warnings
+from typing import Any, Dict, List, TextIO, Tuple, Union
+
 import mlflow
 import wandb
 from omegaconf import OmegaConf
+from stable_baselines3.common.logger import KVWriter, Video, FormatUnsupportedError, SeqWriter, configure
 from src.utils.util import flatten_dictConf
-from moviepy.editor import VideoFileClip
+
 
 def setup_logger(run_dir, run_name, cfg):
     logger = configure(folder=run_dir, format_strings=[])
@@ -28,7 +29,8 @@ def setup_logger(run_dir, run_name, cfg):
             wandb_args['group'] = cfg['group']
         if 'tags' in cfg:
             wandb_args['tags'] = cfg['tags']
-        wandb.init(**wandb_args)
+        wandb.init(**wandb_args, save_code=True)
+        wandb.run.log_code(".", include_fn=lambda path: path.endswith(".py") or path.endswith(".yaml"))
         logger.output_formats.append(WandBOutputFormat())
     logger.info("Starting training with the following configuration:")
     logger.info(OmegaConf.to_yaml(cfg))
@@ -77,8 +79,6 @@ class WandBOutputFormat(KVWriter, SeqWriter):
         for k in keys_to_del:
             del new_key_values[k]
         wandb.log(new_key_values, step=step)
-
-
 
     def write_sequence(self, sequence: List) -> None:
         pass

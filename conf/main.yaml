@@ -2,7 +2,7 @@ defaults:
   # the name of the algorithm to be used ('td3', 'sac', 'dqn', 'ddpg')
   # here we use hydras config group defaults
   - _self_
-  - algorithm: 'cleansac'
+  - algorithm: 'ppo'
   - override hydra/sweeper: optuna
   - override hydra/sweeper/sampler: tpe
   - override hydra/launcher: custom_joblib # For multiprocessing, allows for n_jobs > 1. Comment this line to use the standard launcher which spawns a single process at a time. The standard launcher is much better for debugging.
@@ -11,7 +11,11 @@ defaults:
 env: 'FetchReach-v2'
 
 # keyword arguments for the environment
-env_kwargs: {}
+env_kwargs: {
+              gravity: -5.0,
+              enable_wind: False,
+              wind_power: 10.0
+}
 
 # The render* args specify how and when to render and plot during training and testing.
 # 'record' is for recording the rendered scene as a video file without on-screen display,
@@ -22,9 +26,33 @@ env_kwargs: {}
 # TODO: maybe there is a better place to put render_metrics_* because they depend on the
 # algorithm. Maybe put them in the algorithm/xyz.yaml
 render: 'display' # 'display', 'record', or anything else for neither one
-render_freq: 5 # epochs
-render_metrics_train: ['train/rollout_rewards_step']
-render_metrics_test: ['eval/rollout_rewards_step']
+render_freq: 1 # epochs
+render_metrics_train: [
+  #  'train/rollout_rewards_step',
+  #  'train/rollout_rewards_mean',
+  #  'fm/fw_loss',
+  #  'train/predicted_reward',
+  #  'train/predicted_rewards_mean',
+  #  'train/reward_with_future_reward_estimation_corrective',
+  #  'train/reward_with_future_reward_estimation_corrective_mean',
+  #  'train/prediction_error',
+  #  'train/prediction_error_mean',
+  #  'eval/rollout_rewards_step',
+  #  'eval/number_of_crashed_or_collected_objects',
+  #  'eval/predicted_rewards',
+  #  'eval/predicted_rewards_mean',
+  #  'eval/reward_with_future_reward_estimation_corrective',
+  #  'eval/prediction_error',
+  # meta env
+  'train/rollout_rewards_step',
+  'train/rollout_rewards_mean',
+  'train/rollout_rewards_dodge_step',
+  'train/rollout_rewards_dodge_mean',
+  'train/rollout_rewards_collect_step',
+  'train/rollout_rewards_collect_mean',
+]
+render_metrics_test: [
+]
 render_frames_per_clip: 0 # Number of frames per clip when recording. If set to 0, one episode is recorded.
 
 # If the seed is 0, it will be set to a pseudo-random value (int(time.time()))
@@ -41,7 +69,7 @@ restore_policy: null
 eval_after_n_steps: 2000
 
 # The max. number of training epochs to run. One epoch consists of 'eval_after_n_steps' actions.
-n_epochs: 60
+n_epochs: 100
 
 # The number of testing rollouts.
 n_test_rollouts: 10

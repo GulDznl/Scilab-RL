@@ -15,7 +15,6 @@ from stable_baselines3.common.buffers import ReplayBuffer, DictReplayBuffer
 from stable_baselines3.her.her_replay_buffer import HerReplayBuffer
 from .mc import MorphologicalNetworks
 
-
 LOG_STD_MAX = 2
 LOG_STD_MIN = -20
 
@@ -142,19 +141,19 @@ class CLEANSACMC:
     """
 
     def __init__(
-        self,
-        env: GymEnv,
-        learning_rate: float = 3e-4,
-        buffer_size: int = 1_000_000,
-        learning_starts: int = 100,
-        batch_size: int = 256,
-        tau: float = 0.005,
-        gamma: float = 0.99,
-        ent_coef: Union[str, float] = "auto",
-        use_her: bool = True,
-        n_critics: int = 2,
-        hidden_size: int = 256,
-        mc: dict = {},
+            self,
+            env: GymEnv,
+            learning_rate: float = 3e-4,
+            buffer_size: int = 1_000_000,
+            learning_starts: int = 100,
+            batch_size: int = 256,
+            tau: float = 0.005,
+            gamma: float = 0.99,
+            ent_coef: Union[str, float] = "auto",
+            use_her: bool = True,
+            n_critics: int = 2,
+            hidden_size: int = 256,
+            mc: dict = {},
     ):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.learning_rate = learning_rate
@@ -245,10 +244,10 @@ class CLEANSACMC:
         )
 
     def learn(
-        self,
-        total_timesteps: int,
-        callback: MaybeCallback = None,
-        log_interval=None,
+            self,
+            total_timesteps: int,
+            callback: MaybeCallback = None,
+            log_interval=None,
     ):
         callback.init_callback(self)
         callback.on_training_start(locals(), globals())
@@ -289,10 +288,10 @@ class CLEANSACMC:
         # perform action
         new_obs, rewards, dones, infos = self.env.step(actions)
         self.calc_reward(
-                flatten_obs(new_obs, self.device).float(),
-                torch.from_numpy(actions).to(self.device).float(),
-                torch.from_numpy(rewards).view(1, -1).to(self.device).float(),
-                is_executing=True
+            flatten_obs(new_obs, self.device).float(),
+            torch.from_numpy(actions).to(self.device).float(),
+            torch.from_numpy(rewards).view(1, -1).to(self.device).float(),
+            is_executing=True
         )
         self.logger.record("actor_entropy", -log_prob.mean().cpu().item(), exclude="tensorboard")
         self.logger.record("train/rollout_rewards_step", np.mean(rewards))
@@ -343,12 +342,12 @@ class CLEANSACMC:
         )
         i_rewards = _err.clone() * self.mc["reward_eta"]
         rewards = e_rewards + i_rewards
-        if is_executing: # If this action is actually executed, log only the current step for visualizing the value.
+        if is_executing:  # If this action is actually executed, log only the current step for visualizing the value.
             self.logger.record("mc/i_reward", i_rewards.mean().item())
             self.logger.record("mc/e_reward", e_rewards.mean().item())
             self.logger.record("mc/kld", _err.mean().item())
             self.logger.record("mc/reward", rewards.mean().item())
-        else: # Take mean of all logged values until dump.
+        else:  # Take mean of all logged values until dump.
             self.logger.record_mean("mc/i_reward", i_rewards.mean().item())
             self.logger.record_mean("mc/e_reward", e_rewards.mean().item())
             self.logger.record_mean("mc/kld", _err.mean().item())
@@ -396,10 +395,10 @@ class CLEANSACMC:
                 observations, next_state_actions, replay_data.rewards
             )
             next_q_value = (
-                rewards.flatten()
-                + (1 - replay_data.dones.flatten())
-                * self.gamma
-                * min_crit_next_target.flatten()
+                    rewards.flatten()
+                    + (1 - replay_data.dones.flatten())
+                    * self.gamma
+                    * min_crit_next_target.flatten()
             )
 
         critic_a_values = self.critic(observations, replay_data.actions)
@@ -425,7 +424,7 @@ class CLEANSACMC:
 
         # Update target networks with polyak update
         for param, target_param in zip(
-            self.critic.parameters(), self.critic_target.parameters()
+                self.critic.parameters(), self.critic_target.parameters()
         ):
             target_param.data.mul_(1 - self.tau)
             torch.add(
@@ -433,11 +432,11 @@ class CLEANSACMC:
             )
 
     def predict(
-        self,
-        obs: Union[np.ndarray, Dict[str, np.ndarray]],
-        state: Optional[Tuple[np.ndarray, ...]] = None,
-        episode_start: Optional[np.ndarray] = None,
-        deterministic: bool = False,
+            self,
+            obs: Union[np.ndarray, Dict[str, np.ndarray]],
+            state: Optional[Tuple[np.ndarray, ...]] = None,
+            episode_start: Optional[np.ndarray] = None,
+            deterministic: bool = False,
     ) -> Tuple[np.ndarray, None]:
         """
         Get the policy action given an observation.
