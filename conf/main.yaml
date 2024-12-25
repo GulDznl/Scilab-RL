@@ -11,11 +11,7 @@ defaults:
 env: 'FetchReach-v2'
 
 # keyword arguments for the environment
-env_kwargs: {
-              gravity: -5.0,
-              enable_wind: False,
-              wind_power: 10.0
-}
+env_kwargs: {}
 
 # The render* args specify how and when to render and plot during training and testing.
 # 'record' is for recording the rendered scene as a video file without on-screen display,

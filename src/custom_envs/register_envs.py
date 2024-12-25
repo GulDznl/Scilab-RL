@@ -177,11 +177,13 @@ def register_custom_envs():
              entry_point="custom_envs.moonlander.moonlander_env:MoonlanderWorldEnv",
              kwargs={'task': 'collect', 'reward_function': 'pos_neg'},
              max_episode_steps=500)
-    register(
-        id="CustomLunarLander-v2",
-        entry_point="custom_envs.lunarlander.lunar_lander_env:LunarLander",
-        max_episode_steps=1000,
-    )
+    register(id="CustomLunarLander-v2",
+            entry_point="custom_envs.lunarlander.lunar_lander_env:LunarLanderEnv",
+            max_episode_steps=1000)
+    register(id="MetaLunarLander-pretrained-v0",
+             entry_point="custom_envs.lunarlander.meta_env:MetaEnv",
+             kwargs={'rl_model_best': "rl_model_best"},
+             max_episode_steps=1000)
 
     filename_small = "hard_object_list_10_times_10.csv"
     filename_small_1 = "hard_object_list_10_times_10_1.csv"

@@ -77,7 +77,7 @@ class ContactDetector(contactListener):
                 self.env.legs[i].ground_contact = False
 
 
-class LunarLander(gym.Env, EzPickle):
+class LunarLanderEnv(gym.Env, EzPickle):
     r"""
     ## Description
     This environment is a classic rocket trajectory optimization problem.
@@ -653,9 +653,12 @@ class LunarLander(gym.Env, EzPickle):
         )  # less fuel spent is better, about -30 for heuristic landing
         reward -= s_power * 0.03
 
+        print("reward:", reward)
+
         terminated = False
+        truncated = False
         if self.game_over or abs(state[0]) >= 1.0:
-            terminated = True
+            truncated = True
             reward = -100
         if not self.lander.awake:
             terminated = True
@@ -663,8 +666,14 @@ class LunarLander(gym.Env, EzPickle):
 
         if self.render_mode == "human":
             self.render()
+
+        info = {"terminated": terminated,
+                "truncated": truncated}
+
+        # print(f"Step returns: {np.array(state, dtype=np.float32), reward, terminated, truncated, info }")
+
         # truncation=False as the time limit is handled by the `TimeLimit` wrapper added during `make`
-        return np.array(state, dtype=np.float32), reward, terminated, False, {}
+        return np.array(state, dtype=np.float32), reward, terminated, truncated, info
 
     def render(self):
         if self.render_mode is None:
