@@ -1,5 +1,15 @@
 __credits__ = ["Andrea PIERRÉ"]
 
+'''
+    THIS ENVIRONMENT WAS MOSTLY COPIED FROM THE GYM GITHUB REPOSITORY.
+    In the original code, it was not clear whether the game was won or lost,
+    as both outcomes were represented by the terminated variable.
+    The code was modified as follows:
+        1) losing the game is no longer represented by "terminated = True" but instead by "truncated = True". 
+        2) both information were added to the info return,
+           because DummyVecEnv only returns "observation, reward, done, and info" but not truncated.
+'''
+
 import math
 from typing import TYPE_CHECKING, Optional
 
@@ -53,7 +63,7 @@ MAIN_ENGINE_Y_LOCATION = (
 )
 
 VIEWPORT_W = 600
-VIEWPORT_H = 900
+VIEWPORT_H = 400
 
 
 class ContactDetector(contactListener):
@@ -231,8 +241,8 @@ class LunarLanderEnv(gym.Env, EzPickle):
         )
 
         assert (
-            -12 < gravity and gravity < 10.0
-        ), f"gravity (current value: {gravity}) must be between -12 and 10"
+            -12.0 < gravity and gravity < 0.0
+        ), f"gravity (current value: {gravity}) must be between -12 and 0"
         self.gravity = gravity
 
         if 0.0 > wind_power or wind_power > 20.0:
@@ -343,11 +353,11 @@ class LunarLanderEnv(gym.Env, EzPickle):
 
         # Create Terrain
         CHUNKS = 11
-        height = self.np_random.uniform(0, H / 3, size=(CHUNKS + 1,))
+        height = self.np_random.uniform(0, H / 2, size=(CHUNKS + 1,))
         chunk_x = [W / (CHUNKS - 1) * i for i in range(CHUNKS)]
         self.helipad_x1 = chunk_x[CHUNKS // 2 - 1]
         self.helipad_x2 = chunk_x[CHUNKS // 2 + 1]
-        self.helipad_y = H / 6
+        self.helipad_y = H / 4
         height[CHUNKS // 2 - 2] = self.helipad_y
         height[CHUNKS // 2 - 1] = self.helipad_y
         height[CHUNKS // 2 + 0] = self.helipad_y
@@ -373,7 +383,7 @@ class LunarLanderEnv(gym.Env, EzPickle):
 
         # Create Lander body
         initial_y = VIEWPORT_H / SCALE
-        initial_x = VIEWPORT_W / SCALE / 4
+        initial_x = VIEWPORT_W / SCALE / 2
         self.lander = self.world.CreateDynamicBody(
             position=(initial_x, initial_y),
             angle=0.0,
@@ -625,9 +635,9 @@ class LunarLanderEnv(gym.Env, EzPickle):
 
         state = [
             (pos.x - VIEWPORT_W / SCALE / 2) / (VIEWPORT_W / SCALE / 2),
-            (pos.y - (self.helipad_y + LEG_DOWN / SCALE)) / (VIEWPORT_H / SCALE / 4),
+            (pos.y - (self.helipad_y + LEG_DOWN / SCALE)) / (VIEWPORT_H / SCALE / 2),
             vel.x * (VIEWPORT_W / SCALE / 2) / FPS,
-            vel.y * (VIEWPORT_H / SCALE / 4) / FPS,
+            vel.y * (VIEWPORT_H / SCALE / 2) / FPS,
             self.lander.angle,
             20.0 * self.lander.angularVelocity / FPS,
             1.0 if self.legs[0].ground_contact else 0.0,
@@ -652,8 +662,6 @@ class LunarLanderEnv(gym.Env, EzPickle):
             m_power * 0.30
         )  # less fuel spent is better, about -30 for heuristic landing
         reward -= s_power * 0.03
-
-        print("reward:", reward)
 
         terminated = False
         truncated = False
