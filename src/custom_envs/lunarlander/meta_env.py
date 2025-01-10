@@ -16,7 +16,7 @@ class MetaEnv(gym.Env):
     }
 
     def __init__(self,
-                 rl_model_best_shorter_env: str,
+                 rl_model_best: str,
                  render_mode=render_mode):
         self.ROOT_DIR = "."
 
@@ -112,7 +112,7 @@ class MetaEnv(gym.Env):
         # load the trained subagents
         with open(
                 os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                             f"../../../policies/{rl_model_best_shorter_env}"), "rb"
+                             f"../../../policies/{rl_model_best}"), "rb"
         ) as file:
             print("start loading agents", file)
             self.trained_agent_one = CLEANPPO.load(path=file,
@@ -126,7 +126,7 @@ class MetaEnv(gym.Env):
             self.trained_agent_one.set_logger(logger=self.logger)
         with open(
                 os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                             f"../../../policies/{rl_model_best_shorter_env}"), "rb"
+                             f"../../../policies/{rl_model_best}"), "rb"
         ) as file:
             self.trained_agent_two = CLEANPPO.load(path=file,
                                                            env=make_vec_env("CustomLunarLander-v2",
@@ -306,6 +306,17 @@ class MetaEnv(gym.Env):
         self.step_counter += 1
         self.state["meta_reward"] = self.total_reward_of_agent_one + self.total_reward_of_agent_two
 
+        win_counter = -1
+        #meta_reward = 0
+        if any([active_terminated and inactive_terminated,
+                active_truncated or inactive_truncated]):
+            win_counter = 0
+            #meta_reward = self.state["meta_reward"]
+            if self.state["state_one"] == 1:
+                win_counter += 1
+            if self.state["state_two"] == 1:
+                win_counter += 1
+
         # all infos in this function
         info = {"active_agent": action,
                 "active_reward": active_reward,
@@ -320,7 +331,8 @@ class MetaEnv(gym.Env):
                 "episode_counter": self.episode_counter,
                 "step_counter": self.step_counter,
                 "last_action": self.last_action,
-                "counter_without_switch": self.counter_without_switch}
+                "counter_without_switch": self.counter_without_switch,
+                "win_counter": win_counter}
 
         # ### TEST OF RESULT ###
         # # active agent number
@@ -350,7 +362,7 @@ class MetaEnv(gym.Env):
         )
 
     def reset(self, seed=None, options=None):
-        ## TEST OF EPISODE-RESULT ###
+        ### TEST OF EPISODE-RESULT ###
         # states of both subagents
         # reward of all agents (subagents and meta agent)
         # print("episode_counter:", self.episode_counter,

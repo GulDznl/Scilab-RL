@@ -670,7 +670,7 @@ class LunarLanderEnv(gym.Env, EzPickle):
             reward = -100
         if not self.lander.awake:
             terminated = True
-            reward = +100
+            reward = +200
 
         if self.render_mode == "human":
             self.render()
