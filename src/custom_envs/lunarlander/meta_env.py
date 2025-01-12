@@ -140,20 +140,20 @@ class MetaEnv(gym.Env):
             print("finish loading agents")
 
         # state of subagents
-        self.agent_one = self.trained_agent_one.env.reset()
-        self.agent_two = self.trained_agent_two.env.reset()
-        self.total_reward_of_agent_one = 0
-        self.total_reward_of_agent_two = 0
+        self.last_state_of_agent_one = self.trained_agent_one.env.reset()
+        self.last_state_of_agent_two = self.trained_agent_two.env.reset()
+        self.total_reward_of_agent_one = 0.0
+        self.total_reward_of_agent_two = 0.0
 
         # state of meta-agent
         self.state = {
-            "agent_one": self.agent_one,
-            "agent_two": self.agent_two,
-            "reward_one" : 0,
-            "reward_two" : 0,
+            "agent_one": self.last_state_of_agent_one,
+            "agent_two": self.last_state_of_agent_two,
+            "reward_one" : 0.0,
+            "reward_two" : 0.0,
             "state_one": 0,
             "state_two": 0,
-            "meta_reward": 0,
+            "meta_reward": 0.0,
             "meta_action": 0
         }
 
@@ -195,17 +195,17 @@ class MetaEnv(gym.Env):
             case 0:
                 # agent one
                 active_agent = self.trained_agent_one
-                active_last_state = self.agent_one
+                active_last_state = self.last_state_of_agent_one
                 inactive_agent = self.trained_agent_two
-                inactive_last_state = self.agent_two
+                inactive_last_state = self.last_state_of_agent_two
                 self.current_task = 0
                 self.state["meta_action"] = 0
             case 1:
                 # agent two
                 active_agent = self.trained_agent_two
-                active_last_state = self.agent_two
+                active_last_state = self.last_state_of_agent_two
                 inactive_agent = self.trained_agent_one
-                inactive_last_state = self.agent_one
+                inactive_last_state = self.last_state_of_agent_one
                 self.current_task = 1
                 self.state["meta_action"] = 1
 
@@ -225,7 +225,7 @@ class MetaEnv(gym.Env):
         # perform the action
         # only four return value because DummyVecEnv only returns observation, reward, done, info
         # because of that terminated (won) and truncated (lost) info is in active_info
-        (new_obs,
+        (active_obs,
          active_reward,
          _,
          active_info) = active_agent.env.step(np.array(action_of_active_agent))
@@ -259,6 +259,7 @@ class MetaEnv(gym.Env):
             inactive_truncated = inactive_info[0]["truncated"]
         # if the inactive agent has won the game, it no longer takes steps (its game is over)
         else:
+            inactive_obs = inactive_last_state
             inactive_terminated = True
             inactive_truncated = False
             inactive_reward = 0
@@ -266,45 +267,58 @@ class MetaEnv(gym.Env):
         ### UPDATE ###
         # update the obs of active agent and reward of both agents
         match action:
+            # agent one
             case 0:
-                # agent one
-                self.agent_one = new_obs
+                # update states
+                # updated state of inactive agent is not visible to the meta-agent
+                self.last_state_of_agent_one = active_obs
+                self.state["agent_one"] = active_obs
+                self.last_state_of_agent_two = inactive_obs
+                if active_terminated:
+                    self.state["state_one"] = 1
+                    # print("AGENT ONE WON")
+                elif active_truncated:
+                    self.state["state_one"] = 2
+                # meta agent only knows if inactive agent is still playing
+                if inactive_terminated:
+                    self.state["state_two"] = 1
+                    # print("AGENT TWO WON")
+                elif inactive_truncated:
+                    self.state["state_two"] = 2
+                # update rewards
+                # updated reward of inactive agent is not visible to the meta-agent
                 self.total_reward_of_agent_one += active_reward
                 self.state["reward_one"] = self.total_reward_of_agent_one
+                self.total_reward_of_agent_two += inactive_reward
+            # agent two
+            case 1:
+                # update states
+                # updated state of inactive agent is not visible to the meta-agent
+                self.last_state_of_agent_two = active_obs
+                self.state["agent_two"] = active_obs
+                self.last_state_of_agent_one = inactive_obs
                 if active_terminated:
-                    self.state["state_one"] = 1
-                    # print("AGENT ONE WON")
-                elif active_truncated:
-                    self.state["state_one"] = 2
-                if inactive_terminated:
                     self.state["state_two"] = 1
                     # print("AGENT TWO WON")
-                elif inactive_truncated:
+                elif active_truncated:
                     self.state["state_two"] = 2
+                # meta agent only knows if inactive agent is still playing
+                if inactive_terminated:
+                    self.state["state_one"] = 1
+                    # print("AGENT ONE WON")
+                elif inactive_truncated:
+                    self.state["state_one"] = 2
+                # update rewards
                 # updated reward of inactive agent is not visible to the meta-agent
-                self.total_reward_of_agent_two += inactive_reward
-            case 1:
-                # agent two
-                self.agent_two = new_obs
                 self.total_reward_of_agent_two += active_reward
                 self.state["reward_two"] = self.total_reward_of_agent_two
-                if active_terminated:
-                    self.state["state_two"] = 1
-                    # print("AGENT TWO WON")
-                elif active_truncated:
-                    self.state["state_two"] = 2
-                if inactive_terminated:
-                    self.state["state_one"] = 1
-                    # print("AGENT ONE WON")
-                elif inactive_truncated:
-                    self.state["state_one"] = 2
-                # updated reward of inactive agent is not visible to the meta-agent
                 self.total_reward_of_agent_one += inactive_reward
             case _:
                 raise ValueError("action must be 0, 1")
 
         self.step_counter += 1
         self.state["meta_reward"] = self.total_reward_of_agent_one + self.total_reward_of_agent_two
+        reward = active_reward + inactive_reward
 
         win_counter = -1
         #meta_reward = 0
@@ -340,22 +354,28 @@ class MetaEnv(gym.Env):
         # # terminated infos of both subagents
         # # truncated infos of both agents
         # # reward of all agents (subagents and meta agent)
-        # print("active agent:", self.state["meta_action"])
-        # print("state_one", self.state["state_one"],
-        #       "state_two", self.state["state_two"])
-        # print("active_terminated:", active_terminated,
-        #       "inactive_terminated:", inactive_terminated)
-        # print("active_truncated;", active_truncated,
-        #       "inactive_truncated:", inactive_truncated)
-        # print("reward_one:", self.total_reward_of_agent_one,
-        #       "reward_two:", self.total_reward_of_agent_two,
-        #       "meta_reward:", self.state["meta_reward"])
+        print("step_counter:", self.step_counter)
+        print("active agent:", self.state["meta_action"])
+        print("state_one", self.last_state_of_agent_one,
+              "state_two", self.last_state_of_agent_two),
+        print("state one for meta", self.state["state_one"],
+              "state two for meta", self.state["state_two"])
+        print("active_terminated:", active_terminated,
+              "inactive_terminated:", inactive_terminated)
+        print("active_truncated;", active_truncated,
+              "inactive_truncated:", inactive_truncated)
+        print("total reward_one:", self.total_reward_of_agent_one,
+              "total reward_two:", self.total_reward_of_agent_two,
+              "meta_reward:", self.state["meta_reward"])
+        print("active_reward:", active_reward,
+              "inactive_reward:", inactive_reward,
+              "reward:", reward)
 
         #if not self.render_mode is None:
 
         return (
             self.state,
-            self.state["meta_reward"],
+            reward,
             active_terminated and inactive_terminated,
             active_truncated or inactive_truncated,
             info
@@ -374,20 +394,20 @@ class MetaEnv(gym.Env):
 
         # reset state of subagents
         # only one return value because DummyVecEnv only returns one observation
-        self.agent_one = self.trained_agent_one.env.reset()
-        self.agent_two = self.trained_agent_two.env.reset()
-        self.total_reward_of_agent_one = 0
-        self.total_reward_of_agent_two = 0
+        self.last_state_of_agent_one = self.trained_agent_one.env.reset()
+        self.last_state_of_agent_two = self.trained_agent_two.env.reset()
+        self.total_reward_of_agent_one = 0.0
+        self.total_reward_of_agent_two = 0.0
 
         # reset state of meta-agent
         self.state = {
-            "agent_one": self.agent_one,
-            "agent_two": self.agent_two,
-            "reward_one": 0,
-            "reward_two": 0,
+            "agent_one": self.last_state_of_agent_one,
+            "agent_two": self.last_state_of_agent_two,
+            "reward_one": 0.0,
+            "reward_two": 0.0,
             "state_one": 0,
             "state_two": 0,
-            "meta_reward": 0,
+            "meta_reward": 0.0,
             "meta_action": 0
         }
 
