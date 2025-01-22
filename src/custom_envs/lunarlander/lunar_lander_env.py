@@ -317,6 +317,8 @@ class LunarLanderEnv(gym.Env, EzPickle):
             self.action_space = spaces.Discrete(4)
 
         self.render_mode = render_mode
+        self.step_counter = 0
+        self.pause = False
 
     def _destroy(self):
         if not self.moon:
@@ -338,6 +340,10 @@ class LunarLanderEnv(gym.Env, EzPickle):
     ):
         super().reset(seed=seed)
         self._destroy()
+
+        # parameters for training subagents to handle interrupts
+        self.step_counter = 0
+        self.pause = False
 
         # Bug's workaround for: https://github.com/Farama-Foundation/Gymnasium/issues/728
         # Not sure why the self._destroy() is not enough to clean(reset) the total world environment elements, need more investigation on the root cause,
@@ -518,6 +524,18 @@ class LunarLanderEnv(gym.Env, EzPickle):
                 True,
             )
 
+        # train subagents to handle interrupts
+        # if self.step_counter > 15:
+        #     self.pause = True
+        # if self.pause:
+        #     action = 0
+        #     self.step_counter -= 3
+        #     if self.step_counter < 0:
+        #         self.pause = False
+        #         self.step_counter = 0
+        # else:
+        #     self.step_counter += 1
+
         if self.continuous:
             action = np.clip(action, -1, +1).astype(np.float64)
         else:
@@ -647,7 +665,7 @@ class LunarLanderEnv(gym.Env, EzPickle):
 
         reward = 0
         shaping = (
-            -100 * np.sqrt(state[0] * state[0] + state[1] * state[1])
+            - 100 * np.sqrt(state[0] * state[0] + state[1] * state[1])
             - 100 * np.sqrt(state[2] * state[2] + state[3] * state[3])
             - 100 * abs(state[4])
             + 10 * state[6]
@@ -670,7 +688,7 @@ class LunarLanderEnv(gym.Env, EzPickle):
             reward = -100
         if not self.lander.awake:
             terminated = True
-            reward = +200
+            reward = +100
 
         if self.render_mode == "human":
             self.render()

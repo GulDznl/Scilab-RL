@@ -182,7 +182,7 @@ def register_custom_envs():
             max_episode_steps=500)
     register(id="MetaLunarLander-pretrained-v0",
              entry_point="custom_envs.lunarlander.meta_env:MetaEnv",
-             kwargs={'rl_model_best': "rl_model_best"},
+             kwargs={'rl_model_best_with_pause': "rl_model_best_with_pause"},
              max_episode_steps=500)
 
     filename_small = "hard_object_list_10_times_10.csv"
