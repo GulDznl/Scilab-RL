@@ -226,7 +226,9 @@ class CustomEvalCallback(EvalCallback):
             # Sync training and eval env if there is VecNormalize
             sync_envs_normalization(self.training_env, self.eval_env)
 
-            episode_rewards, episode_lengths, episode_number_of_crashed_or_collected_objects = custom_evaluate_policy(
+            (episode_rewards,
+             episode_lengths,
+             episode_number_of_crashed_or_collected_objects) = custom_evaluate_policy(
                 self.model,
                 self.eval_env,
                 n_eval_episodes=self.n_eval_episodes,
@@ -284,6 +286,36 @@ class CustomEvalCallback(EvalCallback):
 
         return True
 
+# class CustomEvalCallbackMetaLunarLander(EvalCallback):
+#     """
+#         Callback for evaluating an agent.
+#
+#         .. warning::
+#
+#           When using multiple environments, each call to  ``env.step()``
+#           will effectively correspond to ``n_envs`` steps.
+#           To account for that, you can use ``eval_freq = max(eval_freq // n_envs, 1)``
+#
+#         :param eval_env: The environment used for initialization
+#         :param callback_on_new_best: Callback to trigger
+#             when there is a new best model according to the ``mean_reward``
+#         :param n_eval_episodes: The number of episodes to test the agent
+#         :param eval_freq: Evaluate the agent every ``eval_freq`` call of the callback.
+#         :param log_path: Path to a folder where the evaluations (``evaluations.npz``)
+#             will be saved. It will be updated at each evaluation.
+#         :param best_model_save_path: Path to a folder where the best model
+#             according to performance on the eval env will be saved.
+#         :param deterministic: Whether the evaluation should
+#             use a stochastic or deterministic actions.
+#         :param render: Whether to render or not the environment during evaluation
+#         :param verbose:
+#         :param warn: Passed to ``evaluate_policy`` (warns if ``eval_env`` has not been
+#             wrapped with a Monitor wrapper)
+#         """
+#
+#
+#
+#     return True
 
 class CustomEvalCallbackMetaAgent(EvalCallback):
     """
@@ -318,7 +350,12 @@ class CustomEvalCallbackMetaAgent(EvalCallback):
             # Sync training and eval env if there is VecNormalize
             sync_envs_normalization(self.training_env, self.eval_env)
 
-            episode_rewards, episode_lengths, episode_number_of_crashed_objects, episode_number_of_collected_objects, episode_number_of_switches, episode_number_of_dodge_actions, episode_number_of_collect_actions = custom_evaluate_policy_meta_agent(
+            (episode_rewards, episode_lengths,
+             episode_number_of_crashed_objects,
+             episode_number_of_collected_objects,
+             episode_number_of_switches,
+             episode_number_of_dodge_actions,
+             episode_number_of_collect_actions) = custom_evaluate_policy_meta_agent(
                 self.model,
                 self.eval_env,
                 n_eval_episodes=self.n_eval_episodes,

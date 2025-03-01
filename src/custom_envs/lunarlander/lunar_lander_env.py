@@ -317,8 +317,9 @@ class LunarLanderEnv(gym.Env, EzPickle):
             self.action_space = spaces.Discrete(4)
 
         self.render_mode = render_mode
+        self.episode_counter = 0
         self.step_counter = 0
-        self.pause = False
+        self.pause = True
 
     def _destroy(self):
         if not self.moon:
@@ -342,8 +343,10 @@ class LunarLanderEnv(gym.Env, EzPickle):
         self._destroy()
 
         # parameters for training subagents to handle interrupts
+        self.episode_counter += 1
+        # print("episode_counter:", self.episode_counter)
         self.step_counter = 0
-        self.pause = False
+        self.pause = True
 
         # Bug's workaround for: https://github.com/Farama-Foundation/Gymnasium/issues/728
         # Not sure why the self._destroy() is not enough to clean(reset) the total world environment elements, need more investigation on the root cause,
@@ -525,16 +528,19 @@ class LunarLanderEnv(gym.Env, EzPickle):
             )
 
         # train subagents to handle interrupts
-        # if self.step_counter > 15:
-        #     self.pause = True
         # if self.pause:
         #     action = 0
-        #     self.step_counter -= 3
-        #     if self.step_counter < 0:
-        #         self.pause = False
-        #         self.step_counter = 0
-        # else:
         #     self.step_counter += 1
+        #     if self.step_counter > 4:
+        #         self.pause = False
+        # else:
+        #     self.step_counter -= 1
+        #     if self.step_counter < -5:
+        #         self.pause = True
+        #         self.step_counter = 0
+        #
+        # print("step_counter:", self.step_counter)
+        # print("action of subagent:", action)
 
         if self.continuous:
             action = np.clip(action, -1, +1).astype(np.float64)
@@ -665,9 +671,13 @@ class LunarLanderEnv(gym.Env, EzPickle):
 
         reward = 0
         shaping = (
+            # distance from landing pad
             - 100 * np.sqrt(state[0] * state[0] + state[1] * state[1])
+            # horizontal and vertical speed
             - 100 * np.sqrt(state[2] * state[2] + state[3] * state[3])
+            # lander angle
             - 100 * abs(state[4])
+            # left and right leg contact with ground
             + 10 * state[6]
             + 10 * state[7]
         )  # And ten points for legs contact, the idea is if you
@@ -677,8 +687,10 @@ class LunarLanderEnv(gym.Env, EzPickle):
         self.prev_shaping = shaping
 
         reward -= (
+            # side engine usage
             m_power * 0.30
         )  # less fuel spent is better, about -30 for heuristic landing
+        # main engine usage
         reward -= s_power * 0.03
 
         terminated = False
@@ -690,13 +702,27 @@ class LunarLanderEnv(gym.Env, EzPickle):
             terminated = True
             reward = +100
 
+        ### PARAMETERS FOR META REWARD ###
+        # horizontal and vertical speed
+        speed = np.sqrt(state[2] * state[2] + state[3] * state[3])
+        # lander angle
+        angle = abs(state[4])
+
         if self.render_mode == "human":
             self.render()
 
         info = {"terminated": terminated,
-                "truncated": truncated}
+                "truncated": truncated,
+                "speed": speed,
+                "angle": angle}
 
         # print(f"Step returns: {np.array(state, dtype=np.float32), reward, terminated, truncated, info }")
+        # print("step_counter:", self.step_counter)
+        # print("speed:", speed)
+        # print("angle:", angle)
+
+        # if terminated or truncated:
+        #     print("episode_counter:", self.episode_counter)
 
         # truncation=False as the time limit is handled by the `TimeLimit` wrapper added during `make`
         return np.array(state, dtype=np.float32), reward, terminated, truncated, info
