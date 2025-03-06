@@ -1,0 +1,5 @@
+name: 'ppo_meta_lunarlander'
+
+verbose: True
+
+policy: 'MultiInputPolicy' # use MlpPolicy when using an environment without DictObs

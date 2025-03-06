@@ -19,8 +19,8 @@ from utils.util import get_git_label, set_global_seeds, get_train_render_schedul
     avoid_start_learn_before_first_episode_finishes
 from utils.mlflow_util import setup_mlflow, get_hyperopt_score, log_params_from_omegaconf_dict
 from utils.custom_logger import setup_logger
-from utils.custom_callbacks import EarlyStopCallback, EvalCallback, CustomEvalCallback, CustomEvalCallbackMetaAgent
-    #CustomEvalCallbackMetaLunarLander
+from utils.custom_callbacks import EarlyStopCallback, EvalCallback, CustomEvalCallback, CustomEvalCallbackMetaAgent, \
+    CustomEvalCallbackMetaLunarLander
 from utils.custom_wrappers import DisplayWrapper, RecordVideo
 
 # make git_label available in hydra
@@ -137,14 +137,14 @@ def create_callbacks(cfg, logger, eval_env):
                                                     render=False,
                                                     warn=False)
 
-    # elif cfg['env'].startswith('MetaLunarLander'):
-    #     eval_callback = CustomEvalCallbackMetaLunarLander(eval_env,
-    #                                                 n_eval_episodes=cfg.n_test_rollouts,
-    #                                                 eval_freq=cfg.eval_after_n_epochs,
-    #                                                 log_path=logger.get_dir(),
-    #                                                 best_model_save_path=logger.get_dir(),
-    #                                                 render=False,
-    #                                                 warn=False)
+    elif cfg['env'].startswith('MetaLunarLander'):
+        eval_callback = CustomEvalCallbackMetaLunarLander(eval_env,
+                                                    n_eval_episodes=cfg.n_test_rollouts,
+                                                    eval_freq=cfg.eval_after_n_steps,
+                                                    log_path=logger.get_dir(),
+                                                    best_model_save_path=logger.get_dir(),
+                                                    render=False,
+                                                    warn=False)
     else:
         eval_callback = EvalCallback(eval_env,
                                      n_eval_episodes=cfg.n_test_rollouts,
@@ -154,7 +154,7 @@ def create_callbacks(cfg, logger, eval_env):
                                      render=False,
                                      warn=False)
 
-    #callback.append(eval_callback)
+    callback.append(eval_callback)
     early_stop_callback = EarlyStopCallback(metric=cfg.early_stop_data_column, eval_freq=cfg.eval_after_n_steps,
                                             threshold=cfg.early_stop_threshold, n_episodes=cfg.early_stop_last_n)
     callback.append(early_stop_callback)

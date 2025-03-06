@@ -216,7 +216,7 @@ def evaluate_policy(
         return episode_rewards, episode_lengths, episode_number_of_crashed_or_collected_objects
     return mean_reward, std_reward
 
-def evaluate_policy_meta_lunar_lander(
+def evaluate_policy_meta_lunarlander(
         model: "base_class.BaseAlgorithm",
         env: Union[gym.Env, VecEnv],
         n_eval_episodes: int = 10,
@@ -229,7 +229,7 @@ def evaluate_policy_meta_lunar_lander(
         # from us
         callback_metric_viz=None,
         logger=None,
-) -> Union[Tuple[float, float], Tuple[List[float], List[int], List[int]]]:
+) -> tuple[Any, list[Any], Any, Any, int | Any] | tuple[Any, Any]:
     """
         From the stable-baselines3 evaluation implementation.
 
@@ -287,7 +287,7 @@ def evaluate_policy_meta_lunar_lander(
     episode_meta_rewards = []
     episode_agent_one_rewards = []
     episode_agent_two_rewards = []
-    win_counters = []
+    number_of_wins = 0
     ###
     episode_rewards = []
     episode_lengths = []
@@ -313,8 +313,8 @@ def evaluate_policy_meta_lunar_lander(
 
         ### from me
         info_dict = infos[0]
-        logger.record("eval/meta_action", info_dict["meta_action"])
-        logger.record("eval/counter_without_switch", info_dict["counter_without_switch"])
+        #logger.record("eval/meta_action", info_dict["meta_action"])
+        #logger.record("eval/counter_without_switch", info_dict["counter_without_switch"])
         ###
 
         # already logged in custom callback
@@ -355,14 +355,16 @@ def evaluate_policy_meta_lunar_lander(
                         #logger.record("eval/meta_reward", info_dict["meta_reward"])
                         #logger.record("eval/reward_one", info_dict["reward_one"])
                         #logger.record("eval/reward_two", info_dict["reward_two"])
-                        logger.record("eval/state_one", info["state_one"])
-                        logger.record("eval/state_two", info["state_two"])
-                        logger.record("eval/win_counter", info["win_counter"])
+                        #logger.record("eval/state_one", info["state_one"])
+                        #logger.record("eval/state_two", info["state_two"])
+                        #logger.record("eval/win_counter", info["win_counter"])
+
+                        if info.get("win_counter", 0) == 2:
+                            number_of_wins += 1
 
                         episode_meta_rewards.append(info.get("meta_reward", 0))
                         episode_agent_one_rewards.append(info.get("reward_one", 0))
                         episode_agent_two_rewards.append(info.get("reward_two", 0))
-                        win_counters.append(info.get("win_counter", 0))
                         ###
 
                     current_rewards[i] = 0
@@ -378,17 +380,20 @@ def evaluate_policy_meta_lunar_lander(
     mean_meta_reward = np.mean(episode_meta_rewards)
     mean_episode_agent_one_reward = np.mean(episode_agent_one_rewards)
     mean_episode_agent_two_reward = np.mean(episode_agent_two_rewards)
-    mean_win_counter = np.mean(win_counters)
     ###
-    mean_reward = np.mean(episode_rewards)
-    std_reward = np.std(episode_rewards)
+    mean_reward = np.mean(mean_meta_reward)
+    std_reward = np.std(mean_meta_reward)
 
     if reward_threshold is not None:
         assert mean_reward > reward_threshold, "Mean reward below threshold: " f"{mean_reward:.2f} < {reward_threshold:.2f}"
 
     #for the detailed info
     if return_episode_rewards:
-        return mean_meta_reward, mean_episode_agent_one_reward, mean_episode_agent_two_reward, mean_win_counter
+        return (mean_meta_reward,
+                episode_lengths,
+                mean_episode_agent_one_reward,
+                mean_episode_agent_two_reward,
+                number_of_wins)
     return mean_reward, std_reward
 
 
