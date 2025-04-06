@@ -1,3 +1,13 @@
+__credits__ = ["Guelseren DUEZENLI"]
+
+'''
+    THIS ENVIRONMENT IS FROM ME.
+    Contains 4 meta-reward functions (currently commented out except BASE-REWARD-FUNCTION version1).
+    Uncomment the specific reward function you want to test. 
+    If a reward function has specific variables, they are clearly marked with the function name.
+    for example 'parameter for XXX-Reward'
+'''
+
 import math
 import os
 import gymnasium as gym
@@ -16,7 +26,7 @@ class MetaEnv(gym.Env):
     }
 
     def __init__(self,
-                 rl_model_best_with_pause: str,
+                 sub_agent: str,
                  render_mode=render_mode):
         self.ROOT_DIR = "."
 
@@ -112,7 +122,7 @@ class MetaEnv(gym.Env):
         # load the trained subagents
         with open(
                 os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                             f"../../../policies/{rl_model_best_with_pause}"), "rb"
+                             f"../../../policies/{sub_agent}"), "rb"
         ) as file:
             print("start loading agents", file)
             self.trained_agent_one = CLEANPPO.load(path=file,
@@ -126,7 +136,7 @@ class MetaEnv(gym.Env):
             self.trained_agent_one.set_logger(logger=self.logger)
         with open(
                 os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                             f"../../../policies/{rl_model_best_with_pause}"), "rb"
+                             f"../../../policies/{sub_agent}"), "rb"
         ) as file:
             self.trained_agent_two = CLEANPPO.load(path=file,
                                                            env=make_vec_env("CustomLunarLander-v2",
@@ -161,22 +171,21 @@ class MetaEnv(gym.Env):
             "meta_reward": 0.0,
             "meta_action": 0
         }
-        # subagent selection sequence in an episode
+
+        # parameter for choice-based reward
+        self.last_meta_reward = 0.0
+
+        # subagent selection sequence in an episode (for test)
         self.switch_sequence = []
 
-        # parameters for choice-based reward
-        self.last_reward_of_agent_one = 0.0
-        self.last_reward_of_agent_two = 0.0
-
         # for rendering
-        # FIXME: display sind nicht getrennt
+        # FIXME: display sind nicht getrennt.
         # if not self.render_mode is None:
 
         # counter
         self.episode_counter = 0
         self.step_counter = 0
         self.counter_without_switch = 0
-        #self.last_counter_without_switch = 0
         self.last_action = 0
 
     def step(self, action: int):
@@ -186,27 +195,37 @@ class MetaEnv(gym.Env):
                     1: agent two
         """
         # automatically switch to the other agent if the selected one has already won the game
-        # or counter_without_switch more than 7
+        # or counter_without_switch more than 'max_repeat'
         # start abruptly a new episode only if one subagent loses the game while the other is still playing
-        feedback = 0
+        # ('punish' is only used in CHANGE-BASED-REWARD)
+        punish = False
+        # base value of 'max_repeat' for setup is 7 (allows up to 9 same-agent selections in a row)
+        # (change the value for CHANGE-BASED-REWARD)
+        max_repeat = 7
         match action:
             case 0:
                 # agent one
                 if (self.state["state_one"] == 1
-                        or self.counter_without_switch > 7):
+                        or self.counter_without_switch > max_repeat):
                     action = 1
+
+                    # # check punish for CHANGE-BASED REWARD
+                    # if self.state["state_one"] != 1:
+                    #     punish = True
+
                     self.counter_without_switch = 0
-                    #self.last_counter_without_switch = 1
-                    feedback = -50
                     #print("PLAY AGENT TWO!")
             case 1:
                 # agent two
                 if (self.state["state_two"] == 1
-                        or self.counter_without_switch > 7):
+                        or self.counter_without_switch > max_repeat):
                     action = 0
+
+                    # # check punish for CHANGE-BASED REWARD
+                    # if self.state["state_two"] != 1:
+                    #     punish = True
+
                     self.counter_without_switch = 0
-                    #self.last_counter_without_switch = 1
-                    feedback = -50
                     #print("PLAY AGENT ONE!")
 
             # If an exact match is not confirmed, this last case will be used if provided
@@ -216,11 +235,10 @@ class MetaEnv(gym.Env):
         # save the action
         self.switch_sequence.append(action)
 
-        # task switch
+        # update task switch
         if self.last_action == action:
             self.counter_without_switch += 1
         else:
-            #self.last_counter_without_switch = self.counter_without_switch + 0
             self.counter_without_switch = 0
             self.last_action = action
 
@@ -233,7 +251,6 @@ class MetaEnv(gym.Env):
                 active_last_state = self.last_state_of_agent_one
                 inactive_agent = self.trained_agent_two
                 inactive_last_state = self.last_state_of_agent_two
-                inactive_last_reward = self.total_reward_of_agent_two
                 self.state["meta_action"] = 0
             case 1:
                 # agent two
@@ -241,7 +258,6 @@ class MetaEnv(gym.Env):
                 active_last_state = self.last_state_of_agent_two
                 inactive_agent = self.trained_agent_one
                 inactive_last_state = self.last_state_of_agent_one
-                inactive_last_reward = self.total_reward_of_agent_one
                 self.state["meta_action"] = 1
 
             # If an exact match is not confirmed, this last case will be used if provided
@@ -264,6 +280,7 @@ class MetaEnv(gym.Env):
         # extract terminated and truncated values from active_info
         active_terminated = active_info[0]["terminated"]
         active_truncated = active_info[0]["truncated"]
+        # these values are only used in SIMPLIFIED META REWARD
         active_speed = active_info[0]["speed"]
         active_angle = active_info[0]["angle"]
 
@@ -283,6 +300,7 @@ class MetaEnv(gym.Env):
             # extract terminated and truncated values from inactive_info
             inactive_terminated = inactive_info[0]["terminated"]
             inactive_truncated = inactive_info[0]["truncated"]
+            # these values are only used in SIMPLIFIED META REWARD
             inactive_speed = inactive_info[0]["speed"]
             inactive_angle = inactive_info[0]["angle"]
         # if the inactive agent has won the game, it no longer takes steps (its game is over)
@@ -291,6 +309,7 @@ class MetaEnv(gym.Env):
             inactive_terminated = True
             inactive_truncated = False
             inactive_reward = 0.0
+            # these values are only used in SIMPLIFIED META REWARD
             inactive_speed = 0.0
             inactive_angle = 0.0
 
@@ -299,12 +318,12 @@ class MetaEnv(gym.Env):
         match action:
             # agent one
             case 0:
-                # update states
-                # updated state of inactive agent is not visible to the meta-agent
+                # update 'states' (updated state of inactive agent is not visible to the meta-agent)
                 self.last_state_of_agent_one = active_obs
                 self.state["agent_one"] = active_obs
                 self.last_state_of_agent_two = inactive_obs
-                # update speed and angle for meta reward
+
+                # update 'speed and angle' for SIMPLIFIED META REWARD
                 if not active_speed == 0.0:
                     self.last_speed_of_agent_one = active_speed
                 if not active_angle == 0.0:
@@ -313,6 +332,8 @@ class MetaEnv(gym.Env):
                     self.last_speed_of_agent_two = inactive_speed
                 if not inactive_angle == 0.0:
                     self.last_angle_of_agent_two = inactive_angle
+
+                # update 'game states' of sub-agents
                 if active_terminated:
                     self.state["state_one"] = 1
                     # print("AGENT ONE WON")
@@ -324,19 +345,19 @@ class MetaEnv(gym.Env):
                     # print("AGENT TWO WON")
                 elif inactive_truncated:
                     self.state["state_two"] = 2
-                # update rewards
-                # updated reward of inactive agent is not visible to the meta-agent
+
+                # update 'rewards' (updated reward of inactive agent is not visible to the meta-agent)
                 self.total_reward_of_agent_one += active_reward
                 self.state["reward_one"] = self.total_reward_of_agent_one
                 self.total_reward_of_agent_two += inactive_reward
             # agent two
             case 1:
-                # update states
-                # updated state of inactive agent is not visible to the meta-agent
+                # update 'states' (updated state of inactive agent is not visible to the meta-agent)
                 self.last_state_of_agent_two = active_obs
                 self.state["agent_two"] = active_obs
                 self.last_state_of_agent_one = inactive_obs
-                # update speed and angle for meta reward
+
+                # update 'speed and angle' for SIMPLIFIED META REWARD
                 if not active_speed == 0.0:
                     self.last_speed_of_agent_two = active_speed
                 if not active_angle == 0.0:
@@ -345,6 +366,8 @@ class MetaEnv(gym.Env):
                     self.last_speed_of_agent_one = inactive_speed
                 if not inactive_angle == 0.0:
                     self.last_angle_of_agent_one = inactive_angle
+
+                # update 'game states' of sub-agents
                 if active_terminated:
                     self.state["state_two"] = 1
                     # print("AGENT TWO WON")
@@ -356,43 +379,56 @@ class MetaEnv(gym.Env):
                     # print("AGENT ONE WON")
                 elif inactive_truncated:
                     self.state["state_one"] = 2
-                # update rewards
-                # updated reward of inactive agent is not visible to the meta-agent
+
+                # update 'rewards' (updated reward of inactive agent is not visible to the meta-agent)
                 self.total_reward_of_agent_two += active_reward
                 self.state["reward_two"] = self.total_reward_of_agent_two
                 self.total_reward_of_agent_one += inactive_reward
             case _:
                 raise ValueError("action must be 0, 1")
 
-        # update meta reward
+        # update meta reward and save old value for CHOICE-BASED REWARD
+        self.last_meta_reward = self.state["meta_reward"]
+        # print("LAST META REWARD:", self.last_meta_reward)
         self.state["meta_reward"] = self.total_reward_of_agent_one + self.total_reward_of_agent_two
+        # print("NEW META REWARD:", self.state["meta_reward"])
 
         # update step counter
         self.step_counter += 1
 
+        ### BASIC REWARD ###
+        # there are two versions of basic reward-function
+        # version1
+        reward = self.state["meta_reward"]
+        # # version2
+        # reward = active_reward + inactive_reward
+
+        ### CHANGE-BASED REWARD ###
+        # # 10% penalty if same sub-agent is selected 'max_repeat' times in a row
+        # reward = active_reward + inactive_reward
+        # if punish:
+        #     # print(self.switch_sequence)
+        #     reward *= 0.9
+
         ### CHOICE-BASED REWARD ###
-        # meta agent gets the reward differences of subagents as its reward
-        # reward_diff_of_agent_one = abs(self.last_reward_of_agent_one - self.total_reward_of_agent_one)
-        # reward_diff_of_agent_two = abs(self.total_reward_of_agent_two - self.last_reward_of_agent_two)
-        # reward = reward_diff_of_agent_one + reward_diff_of_agent_two
-        # print("last_reward_of_agent_one:", self.last_reward_of_agent_one)
-        # print("last_reward_of_agent_two:", self.last_reward_of_agent_two)
-        # print("reward:", reward)
-        # # update last rewards of subagents
-        # # without +0, last rewards automatically update with total
-        # # rewards during the subagents' update process above (unknown why)
-        # self.last_reward_of_agent_one = self.total_reward_of_agent_one + 0
-        # self.last_reward_of_agent_two = self.total_reward_of_agent_two + 0
-        # print("last_reward_of_agent_one:", self.last_reward_of_agent_one)
-        # print("last_reward_of_agent_two:", self.last_reward_of_agent_two)
+        # # meta agent gets the reward differences of his old and new rewards as its reward
+        # reward_diff = abs(self.last_meta_reward - self.state["meta_reward"])
+        # if self.state["meta_reward"] < min(0.0, self.last_meta_reward):
+        #     reward_diff *= -1
+        #
+        # reward = reward_diff
+        # # print("self.last_meta_reward:", self.last_meta_reward)
+        # # print("self.state[meta_reward]:", self.state["meta_reward"])
+        # # print("reward_diff:", reward_diff)
+        # # print("reward:", reward)
 
-        ### SPECIAL META REWARD ###
-        # meta agent gets just speed and angle values ......
-        active_meta_reward = ((-10 * active_speed) + 5) + ((-10 * active_angle) + 3)
-        inactive_meta_reward = ((-10 * inactive_speed) + 5) + ((-10 * inactive_angle) + 3)
-        reward = active_meta_reward + inactive_meta_reward
+        ### SIMPLIFIED META REWARD ###
+        # # meta agent gets just speed and angle values of sub-agents
+        # active_meta_reward = ((-10 * active_speed) + 5) + ((-10 * active_angle) + 3)
+        # inactive_meta_reward = ((-10 * inactive_speed) + 5) + ((-10 * inactive_angle) + 3)
+        # reward = active_meta_reward + inactive_meta_reward
 
-        ## TEST ###
+        ### TEST OF SIMPLIFIED META REWARD ###
         # print("episode_counter:", self.episode_counter)
         # print("step_counter:", self.step_counter)
         # print("active_agent:", action)
@@ -411,6 +447,7 @@ class MetaEnv(gym.Env):
             if self.state["state_two"] == 1:
                 win_counter += 1
 
+        # check if episode is over for info 'episode_over'
         episode_over = (active_terminated and inactive_terminated) or active_truncated or inactive_truncated
 
         # all infos in this function
@@ -439,10 +476,14 @@ class MetaEnv(gym.Env):
                 "meta_action": self.state["meta_action"]}
 
         if episode_over:
+            # for custom_evaluation function
             info["episode"] = {"r": self.state["meta_reward"], "l": self.step_counter}
+            # for test
             print(info)
+            # print(self.switch_sequence)
 
         ### TEST OF RESULT ###
+        # (written individually for specific tests!)
         # print("STEP ENDE")
         # print("episode_counter:", self.episode_counter)
         # print("step_counter:", self.step_counter)
@@ -467,7 +508,7 @@ class MetaEnv(gym.Env):
         # print("Eigentlich state_of_agent_two:", self.last_state_of_agent_two)
         # print("last_reward_of_agent_one:", self.last_reward_of_agent_one)
         # print("last_reward_of_agent_two:", self.last_reward_of_agent_two)
-        # #print("reward:", reward)
+        # print("reward:", reward)
         # print("agent_one:", self.state["agent_one"])
         # print("agent_two:", self.state["agent_two"])
         # print("reward_one:", self.state["reward_one"])
@@ -476,8 +517,6 @@ class MetaEnv(gym.Env):
         # print("state_of_agent_one:", self.state["state_two"])
         # print("meta_reward:", self.state["meta_reward"])
         # print("meta_action:", self.state["meta_action"])
-
-        #if not self.render_mode is None:
 
         return (
             self.state,
@@ -488,20 +527,6 @@ class MetaEnv(gym.Env):
         )
 
     def reset(self, seed=None, options=None):
-        # print("episode_counter:", self.episode_counter, " | ",
-        #       "state_of_agent_one:", self.state["state_one"], " | ",
-        #       "state_of_agent_two:", self.state["state_two"], " | ",
-        #       "last_speed_of_agent_one:", self.last_speed_of_agent_one, " | ",
-        #       "last_angle_of_agent_one:", self.last_angle_of_agent_one, " | ",
-        #       "last_speed_of_agent_two:", self.last_speed_of_agent_two, " | ",
-        #       "last_angle_of_agent_two:", self.last_angle_of_agent_two)
-        # print("episode_counter:", self.episode_counter, " | ",
-        #       "step_counter:", self.step_counter, " | ",
-        #       "state_of_agent_one:", self.state["state_one"], " | ",
-        #       "state_of_agent_two:", self.state["state_two"], " | ",
-        #       "total_reward_of_agent_one:", self.total_reward_of_agent_one, " | ",
-        #       "total_reward_of_agent_two:", self.total_reward_of_agent_two, " | ",
-        #       "meta_reward:", self.state["meta_reward"])
         # reset state of subagents
         # only one return value because DummyVecEnv only returns one observation
         self.last_state_of_agent_one = self.trained_agent_one.env.reset()
@@ -529,9 +554,8 @@ class MetaEnv(gym.Env):
             "meta_action": 0
         }
 
-        # reset parameters for choice-based reward
-        self.last_reward_of_agent_one = 0.0
-        self.last_reward_of_agent_two = 0.0
+        # reset parameter for choice-based reward
+        self.last_meta_reward = 0.0
 
         # reset counter
         self.episode_counter += 1
@@ -539,7 +563,5 @@ class MetaEnv(gym.Env):
         self.counter_without_switch = 0
         #self.last_counter_without_switch = 0
         self.last_action = 0
-
-        # print(self.episode_counter)
 
         return self.state, {}
