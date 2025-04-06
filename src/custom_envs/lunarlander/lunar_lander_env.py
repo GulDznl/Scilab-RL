@@ -1,13 +1,15 @@
 __credits__ = ["Andrea PIERRÉ"]
 
 '''
-    THIS ENVIRONMENT WAS MOSTLY COPIED FROM THE GYM GITHUB REPOSITORY.
+    THIS ENVIRONMENT WAS MOSTLY COPIED FROM THE GYMNASIUM GITHUB REPOSITORY.
     In the original code, it was not clear whether the game was won or lost,
     as both outcomes were represented by the terminated variable.
     The code was modified as follows:
         1) losing the game is no longer represented by "terminated = True" but instead by "truncated = True". 
         2) both information were added to the info return,
            because DummyVecEnv only returns "observation, reward, done, and info" but not truncated.
+        3) extract speed and angle values for simplified meta reward via 'step.info' to meta_env
+        4) set INITIAL_RANDOM 0 or 1000 for test
 '''
 
 import math
@@ -48,7 +50,7 @@ SCALE = 30.0  # affects how fast-paced the game is, forces should be adjusted as
 MAIN_ENGINE_POWER = 13.0
 SIDE_ENGINE_POWER = 0.6
 
-INITIAL_RANDOM = 1000.0  # Set 1500 to make game harder
+INITIAL_RANDOM = 0.0  # Set 1500 to make game harder
 
 LANDER_POLY = [(-14, +17), (-17, 0), (-17, -10), (+17, -10), (+17, 0), (+14, +17)]
 LEG_AWAY = 20
@@ -527,7 +529,9 @@ class LunarLanderEnv(gym.Env, EzPickle):
                 True,
             )
 
+        ### FROM ME ###
         # train subagents to handle interrupts
+        # this test is not used in the current work (considered for future research)
         # if self.pause:
         #     action = 0
         #     self.step_counter += 1
@@ -541,6 +545,9 @@ class LunarLanderEnv(gym.Env, EzPickle):
         #
         # print("step_counter:", self.step_counter)
         # print("action of subagent:", action)
+        ###
+
+        # action = 0
 
         if self.continuous:
             action = np.clip(action, -1, +1).astype(np.float64)
@@ -693,6 +700,9 @@ class LunarLanderEnv(gym.Env, EzPickle):
         # main engine usage
         reward -= s_power * 0.03
 
+        ### FROM ME ###
+        # truncated value is from me
+        # set reward weights as specified in my paper (WEIGHTED REWARD FUNCTION)
         terminated = False
         truncated = False
         if self.game_over or abs(state[0]) >= 1.0:
@@ -702,7 +712,7 @@ class LunarLanderEnv(gym.Env, EzPickle):
             terminated = True
             reward = +100
 
-        ### PARAMETERS FOR META REWARD ###
+        ### PARAMETERS FOR SIMPLIFIED META REWARD ###
         # horizontal and vertical speed
         speed = np.sqrt(state[2] * state[2] + state[3] * state[3])
         # lander angle
@@ -716,6 +726,8 @@ class LunarLanderEnv(gym.Env, EzPickle):
                 "speed": speed,
                 "angle": angle}
 
+        #print(info)
+
         # print(f"Step returns: {np.array(state, dtype=np.float32), reward, terminated, truncated, info }")
         # print("step_counter:", self.step_counter)
         # print("speed:", speed)
@@ -726,6 +738,8 @@ class LunarLanderEnv(gym.Env, EzPickle):
 
         # truncation=False as the time limit is handled by the `TimeLimit` wrapper added during `make`
         return np.array(state, dtype=np.float32), reward, terminated, truncated, info
+
+    ### FROM ME END ###
 
     def render(self):
         if self.render_mode is None:
