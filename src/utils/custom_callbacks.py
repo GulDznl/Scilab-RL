@@ -320,6 +320,8 @@ class CustomEvalCallbackMetaLunarLander(EvalCallback):
             # Sync training and eval env if there is VecNormalize
             sync_envs_normalization(self.training_env, self.eval_env)
 
+            ### from me ###
+            # evaluate policy with 'custom_evaluate_policy_meta_lunarlander' function
             (episode_rewards, episode_lengths,
              mean_episode_agent_one_reward,
              mean_episode_agent_two_reward,
@@ -346,6 +348,7 @@ class CustomEvalCallbackMetaLunarLander(EvalCallback):
                     agent_two_reward=mean_episode_agent_two_reward,
                     number_of_wins=number_of_wins
                 )
+            # calculate means
             mean_reward, std_reward = np.mean(episode_rewards), np.std(episode_rewards)
             mean_ep_length, std_ep_length = np.mean(episode_lengths), np.std(episode_lengths)
             mean_agent_one_reward, std_agent_one_reward = (np.mean(mean_episode_agent_one_reward),
@@ -368,6 +371,7 @@ class CustomEvalCallbackMetaLunarLander(EvalCallback):
             self.logger.record("eval/mean_agent_one_reward", float(mean_agent_one_reward))
             self.logger.record("eval/mean_agent_two_reward", float(mean_agent_two_reward))
             self.logger.record("eval/number_of_wins", int(number_of_wins))
+            ###
 
             # Dump log so the evaluation results are printed with the correct timestep
             self.logger.record("time/total timesteps", self.num_timesteps, exclude="tensorboard")

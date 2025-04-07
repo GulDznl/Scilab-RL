@@ -702,7 +702,7 @@ class LunarLanderEnv(gym.Env, EzPickle):
 
         ### FROM ME ###
         # truncated value is from me
-        # set reward weights as specified in my paper (WEIGHTED REWARD FUNCTION)
+        # set reward weights as specified in my thesis (WEIGHTED REWARD FUNCTION)
         terminated = False
         truncated = False
         if self.game_over or abs(state[0]) >= 1.0:

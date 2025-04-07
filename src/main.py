@@ -137,7 +137,10 @@ def create_callbacks(cfg, logger, eval_env):
                                                     render=False,
                                                     warn=False)
 
-    elif cfg['env'].startswith('MetaLunarLander'):
+    ### from me ###
+    # currently commented out with an extra 'a' (Lunaar) added in the name.
+    # (otherwise, it would have been necessary to comment out CustomEvalCallbackMetaLunarLander from imports as well.)
+    elif cfg['env'].startswith('MetaLunaarLander'):
         eval_callback = CustomEvalCallbackMetaLunarLander(eval_env,
                                                     n_eval_episodes=cfg.n_test_rollouts,
                                                     eval_freq=cfg.eval_after_n_steps,
@@ -145,6 +148,7 @@ def create_callbacks(cfg, logger, eval_env):
                                                     best_model_save_path=logger.get_dir(),
                                                     render=False,
                                                     warn=False)
+    ###
     else:
         eval_callback = EvalCallback(eval_env,
                                      n_eval_episodes=cfg.n_test_rollouts,

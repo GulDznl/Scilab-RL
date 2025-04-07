@@ -217,7 +217,7 @@ def evaluate_policy(
     return mean_reward, std_reward
 
 def evaluate_policy_meta_lunarlander(
-        model: "base_class.BaseAlgorithm",
+        model: "type_aliases.PolicyPredictor",
         env: Union[gym.Env, VecEnv],
         n_eval_episodes: int = 10,
         deterministic: bool = True,
@@ -283,7 +283,7 @@ def evaluate_policy_meta_lunarlander(
         )
 
     n_envs = env.num_envs
-    ### from me
+    ### from me ###
     episode_meta_rewards = []
     episode_agent_one_rewards = []
     episode_agent_two_rewards = []
@@ -311,7 +311,7 @@ def evaluate_policy_meta_lunarlander(
         # an env step
         observations, rewards, dones, infos = env.step(actions)
 
-        ### from me
+        ### from me ###
         info_dict = infos[0]
         #logger.record("eval/meta_action", info_dict["meta_action"])
         #logger.record("eval/counter_without_switch", info_dict["counter_without_switch"])
@@ -351,7 +351,7 @@ def evaluate_policy_meta_lunarlander(
                         episode_lengths.append(current_lengths[i])
                         episode_counts[i] += 1
 
-                        ### from me
+                        ### from me ###
                         #logger.record("eval/meta_reward", info_dict["meta_reward"])
                         #logger.record("eval/reward_one", info_dict["reward_one"])
                         #logger.record("eval/reward_two", info_dict["reward_two"])
@@ -376,7 +376,8 @@ def evaluate_policy_meta_lunarlander(
         if render:
             env.render()
 
-    ### from me
+    ### from me ###
+    # calculate means
     mean_meta_reward = np.mean(episode_meta_rewards)
     mean_episode_agent_one_reward = np.mean(episode_agent_one_rewards)
     mean_episode_agent_two_reward = np.mean(episode_agent_two_rewards)

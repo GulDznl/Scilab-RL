@@ -180,6 +180,7 @@ class MetaEnv(gym.Env):
 
         # for rendering
         # FIXME: display sind nicht getrennt.
+        # (set "render_mode": "human" in sub-agents during load)
         # if not self.render_mode is None:
 
         # counter
