@@ -100,8 +100,7 @@ The Lunar Lander implementation is mainly based on the original code. All change
 2. `EVALUATION META AGENT` src.evaluation_meta.py
 
 
-# My failed attempts that I couldn’t include in the thesis, since the actual limit was 30 page
-# —and I had already stretched it to 40
+# My failed attempts that I couldn’t include in the thesis because they had little impact
 [Custom PPO for test]
 `A custom PPO algorithm was adapted to investigate the effect of performing 'policy updates'
 not every 2048 steps as in the original PPO implementation (see stable_baseline3.ppo), but instead every 10,000 steps.
