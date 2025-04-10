@@ -73,42 +73,42 @@ In that case you need to install the latest nightly build according to the confi
 
 
 
-### GÜLSEREN DÜZENLI ###
-`I adapted Annika Österdiekhoff's Moon Lander setup (a hierarchical RL approach) to the Lunar Lander environment.
+# GÜLSEREN DÜZENLI 
+I adapted Annika Österdiekhoff's Moon Lander setup (a hierarchical RL approach) to the Lunar Lander environment.
 For this work, I implemented a custom meta-environment and adapted the Lunar Lander environment.
-The Lunar Lander implementation is mainly based on the original code. All changes are tagged with ### FROM ME ###.`
+The Lunar Lander implementation is mainly based on the original code. All changes are tagged with ### FROM ME ###.
 
-# My envs:
+### My envs:
 1. [Meta Env]: src.custom_envs.lunarlander.meta_env.py
    `Command:` env=MetaLunarLander-pretrained-v0 algorithm=ppo wandb=0 render=none
 2. [Sub Env]: src.custom_envs.lunarlander.lunar_lander_env.py
    `Command:` env=CustomLunarLander-v2 algorithm=cleanppo wandb=0 render=none
 
-# My hyperparameter optimization for Sub-Env:
+### My hyperparameter optimization for Sub-Env:
 1. performance.LunarLander.lunarlander-cleanppo-opti.yaml
    
-# My register_envs:
-1. [Sub-Env]: id="CustomLunarLander-v2"
-2. [Meta-Env]: id="MetaLunarLander-pretrained-v0"
+### My register_envs:
+1. Sub-Env: `id="CustomLunarLander-v2"`
+2. Meta-Env: `id="MetaLunarLander-pretrained-v0"`
 
-# My evaluation_callback that didn't work:
-1. [Class name]: CustomEvalCallbackMetaLunarLander
-2. [Used function in custom_evaluation]: evaluate_policy_meta_lunarlander
+### My evaluation_callback that didn't work:
+1. Class name: `CustomEvalCallbackMetaLunarLander`
+2. Used function in custom_evaluation: `evaluate_policy_meta_lunarlander`
 
-# So I implemented my own evaluation:
-1. `EVALUATION META TRAINING.` src.evaluation_training.py
-2. `EVALUATION META AGENT` src.evaluation_meta.py
+### So I implemented my own evaluation:
+1. EVALUATION META TRAINING. `src.evaluation_training.py`
+2. EVALUATION META AGENT `src.evaluation_meta.py`
 
 
-# My failed attempts that I couldn’t include in the thesis because they had little impact
+### My failed attempts that I couldn’t include in the thesis because they had little impact
 [Custom PPO for test]
-`A custom PPO algorithm was adapted to investigate the effect of performing 'policy updates'
+A custom PPO algorithm was adapted to investigate the effect of performing 'policy updates'
 not every 2048 steps as in the original PPO implementation (see stable_baseline3.ppo), but instead every 10,000 steps.
-However, since no significant difference was observed, this modification was not included in the thesis.`
+However, since no significant difference was observed, this modification was not included in the thesis.
 1. src.custom_algorithms.ppo_meta_lunarlander.py
 2. algorithm.ppo_meta_lunarlander.yaml
 
 [Hyperparameter Optimization for Meta-Agent]
-`There was also a hyperparameter optimization for the Meta-Agent, but it was not included in the thesis
-because the Meta-Agent only worked to a limited extent (see my thesis).`
+There was also a hyperparameter optimization for the Meta-Agent, but it was not included in the thesis
+because the Meta-Agent only worked to a limited extent (see my thesis).
 3. performance.LunarLander.meta-ppo-opti.yaml
